@@ -5,7 +5,7 @@
   <p>
     <a href="https://github.com/axton/skillbrary/actions"><img src="https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge&logo=github" alt="Build Status"></a>
     <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python" alt="Python Version"></a>
-    <a href="https://github.com/axton/skillbrary/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License"></a>
+    <a href="https://github.com/axton/skillbrary/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Personal_Use-purple?style=for-the-badge" alt="License"></a>
     <a href="https://github.com/axton/skillbrary/issues"><img src="https://img.shields.io/badge/Issues-0_Open-green?style=for-the-badge" alt="Issues"></a>
   </p>
 </div>
@@ -96,4 +96,4 @@ If you discover any security vulnerabilities, please refer to our [SECURITY.md](
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. Copyright (c) 2026 Axton Carroll.
+This project is licensed under the Personal Use License - see the [LICENSE](LICENSE) file for details. Copyright (c) 2026 Axton Carroll.
