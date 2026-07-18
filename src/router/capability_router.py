@@ -1,8 +1,10 @@
+import json
 import os
 import time
-import json
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from src.registry import SkillManifest
+
 
 class CapabilityRouter:
     """
@@ -10,7 +12,13 @@ class CapabilityRouter:
     registry and translate into SkillManifest types.
     Strictly avoids N+1 query loops.
     """
-    def __init__(self, registry: Any = None, index_path: Optional[str] = None, external_api_url: str = "http://localhost:8080/bulk-search"):
+
+    def __init__(
+        self,
+        registry: Any = None,
+        index_path: Optional[str] = None,
+        external_api_url: str = "http://localhost:8080/bulk-search",
+    ):
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.registry = registry
         self.index_path = index_path or os.path.join(project_root, "skills.index.json")
@@ -23,12 +31,12 @@ class CapabilityRouter:
         """
         if not intent or not intent.strip():
             return []
-            
+
         # Simplistic tag extraction from intent for bulk fetching
         tags = [t for t in intent.lower().split() if len(t) > 3]
         if not tags:
             tags = [intent.lower().strip()]
-            
+
         return self.resolve_capabilities(tags)
 
     def resolve_capabilities(self, tags: List[str]) -> List[SkillManifest]:
@@ -38,11 +46,11 @@ class CapabilityRouter:
         Must complete in <50ms.
         """
         start_time = time.perf_counter()
-        
+
         local_index = self._read_local_index()
         results = []
         unresolved_tags = set(tags)
-        
+
         # 1. Bulk search against local index
         # To avoid N+1 query loops, we do a single pass over the local index.
         for skill_id, skill_data in local_index.items():
@@ -50,13 +58,13 @@ class CapabilityRouter:
                 skill_tags = skill_data.get("tags", [])
                 skill_name = skill_data.get("name", "").lower()
                 skill_desc = skill_data.get("description", "").lower()
-                
+
                 # Tag or keyword matching
                 match_tags = []
                 for tag in list(unresolved_tags):
                     if tag in skill_tags or tag in skill_name or tag in skill_desc:
                         match_tags.append(tag)
-                        
+
                 if match_tags:
                     results.append(self._map_to_manifest(skill_data))
                     for t in match_tags:
@@ -67,13 +75,14 @@ class CapabilityRouter:
             external_skills = self._bulk_fetch_external(list(unresolved_tags))
             for skill_data in external_skills:
                 results.append(self._map_to_manifest(skill_data))
-                
+
         # Enforce <50ms latency rule
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         if elapsed_ms > 50:
             import logging
+
             logging.warning(f"Capability resolution latency threshold violated: {elapsed_ms:.2f}ms > 50ms")
-            
+
         return results
 
     def _read_local_index(self) -> Dict[str, Any]:
@@ -93,16 +102,18 @@ class CapabilityRouter:
         """
         mocked_responses = []
         for tag in tags:
-            mocked_responses.append({
-                "id": f"ext_{tag}",
-                "name": f"External {tag} skill",
-                "description": f"Auto-resolved from external registry for tag: {tag}",
-                "version": "1.0.0",
-                "source": "external",
-                "tags": [tag],
-                "trustTier": 1,
-                "state": "PENDING"
-            })
+            mocked_responses.append(
+                {
+                    "id": f"ext_{tag}",
+                    "name": f"External {tag} skill",
+                    "description": f"Auto-resolved from external registry for tag: {tag}",
+                    "version": "1.0.0",
+                    "source": "external",
+                    "tags": [tag],
+                    "trustTier": 1,
+                    "state": "PENDING",
+                }
+            )
         return mocked_responses
 
     def _map_to_manifest(self, data: Dict[str, Any]) -> SkillManifest:
@@ -121,5 +132,5 @@ class CapabilityRouter:
             trustTier=data.get("trustTier", 1),
             installCommand=data.get("installCommand"),
             repoUrl=data.get("repoUrl"),
-            examples=data.get("examples", [])
+            examples=data.get("examples", []),
         )

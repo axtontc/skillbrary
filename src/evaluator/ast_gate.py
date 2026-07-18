@@ -1,13 +1,12 @@
 import ast
-import time
 import re
-from typing import Dict, Any, List
+import time
+from typing import Any, Dict
 
 # Fast reject pre-filtering: match any of the dangerous modules or 'open'.
 # If none of these are present, there can be no tier 3/4 syscalls.
-FAST_REJECT_REGEX = re.compile(
-    r'\b(os|sys|subprocess|pty|socket|requests|urllib|http|ftplib|open)\b'
-)
+FAST_REJECT_REGEX = re.compile(r"\b(os|sys|subprocess|pty|socket|requests|urllib|http|ftplib|open)\b")
+
 
 class ASTAnalyzer(ast.NodeVisitor):
     def __init__(self):
@@ -15,10 +14,10 @@ class ASTAnalyzer(ast.NodeVisitor):
         self.syscalls = set()
         self.external_io = set()
 
-        self.syscall_modules = {'os', 'sys', 'subprocess', 'pty'}
-        self.io_modules = {'socket', 'requests', 'urllib', 'http', 'ftplib'}
-        
-        self.alias_map = {} # Maps alias to module or module.func
+        self.syscall_modules = {"os", "sys", "subprocess", "pty"}
+        self.io_modules = {"socket", "requests", "urllib", "http", "ftplib"}
+
+        self.alias_map = {}  # Maps alias to module or module.func
 
     def visit_Import(self, node):
         for alias in node.names:
@@ -37,27 +36,27 @@ class ASTAnalyzer(ast.NodeVisitor):
         # Check for open()
         if isinstance(node.func, ast.Name):
             func_name = node.func.id
-            if func_name == 'open':
+            if func_name == "open":
                 self.external_io.add("builtin.open")
             elif func_name in self.alias_map:
                 full_name = self.alias_map[func_name]
-                mod = full_name.split('.')[0]
+                mod = full_name.split(".")[0]
                 if mod in self.syscall_modules:
                     self.syscalls.add(full_name)
                 elif mod in self.io_modules:
                     self.external_io.add(full_name)
-                
+
         elif isinstance(node.func, ast.Attribute):
             if isinstance(node.func.value, ast.Name):
                 obj_name = node.func.value.id
                 attr_name = node.func.attr
-                
+
                 if obj_name in self.alias_map:
                     mod = self.alias_map[obj_name]
                 else:
                     mod = obj_name
 
-                mod_base = mod.split('.')[0]
+                mod_base = mod.split(".")[0]
                 if mod_base in self.syscall_modules:
                     self.syscalls.add(f"{mod}.{attr_name}")
                 elif mod_base in self.io_modules:
@@ -69,7 +68,7 @@ class ASTAnalyzer(ast.NodeVisitor):
 def generate_topology(source_code: str) -> Dict[str, Any]:
     """Generates an AST topology dump of the source code."""
     start_time = time.perf_counter()
-    
+
     # 1. Fast Path Pre-Filtering
     if not FAST_REJECT_REGEX.search(source_code):
         end_time = time.perf_counter()
@@ -77,21 +76,21 @@ def generate_topology(source_code: str) -> Dict[str, Any]:
             "elapsed_ms": (end_time - start_time) * 1000,
             "imports": [],
             "syscalls": [],
-            "external_io": []
+            "external_io": [],
         }
 
     tree = ast.parse(source_code)
     analyzer = ASTAnalyzer()
     analyzer.visit(tree)
     end_time = time.perf_counter()
-    
+
     elapsed_ms = (end_time - start_time) * 1000
-    
+
     return {
         "elapsed_ms": elapsed_ms,
         "imports": sorted(list(analyzer.imports)),
         "syscalls": sorted(list(analyzer.syscalls)),
-        "external_io": sorted(list(analyzer.external_io))
+        "external_io": sorted(list(analyzer.external_io)),
     }
 
 
@@ -103,20 +102,17 @@ def gate_topology(topology: Dict[str, Any]) -> Dict[str, Any]:
     Tier 3: Has external IO or non-critical syscalls.
     Tier 4: Has dangerous syscalls (e.g. subprocess, pty, os.system).
     """
-    syscalls = topology.get('syscalls', [])
-    external_io = topology.get('external_io', [])
-    
+    syscalls = topology.get("syscalls", [])
+    external_io = topology.get("external_io", [])
+
     tier = 1
     requires_approval = False
     reasons = []
-    
-    dangerous_syscalls = {'subprocess', 'pty', 'os.system', 'os.popen', 'os.exec'}
-    
-    has_tier4 = any(
-        any(sysc.startswith(d) for d in dangerous_syscalls)
-        for sysc in syscalls
-    )
-    
+
+    dangerous_syscalls = {"subprocess", "pty", "os.system", "os.popen", "os.exec"}
+
+    has_tier4 = any(any(sysc.startswith(d) for d in dangerous_syscalls) for sysc in syscalls)
+
     if has_tier4:
         tier = 4
         requires_approval = True
@@ -128,12 +124,12 @@ def gate_topology(topology: Dict[str, Any]) -> Dict[str, Any]:
     else:
         tier = 1
         requires_approval = False
-    
+
     return {
         "tier": tier,
         "requires_approval": requires_approval,
         "reasons": reasons,
-        "topology": topology
+        "topology": topology,
     }
 
 

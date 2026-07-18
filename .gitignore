@@ -14,3 +14,7 @@ htmlcov/
 .antigravity/
 .benchmarks/
 scratch/
+skills.index.json*
+skills_wal.jsonl*
+*.tmp
+

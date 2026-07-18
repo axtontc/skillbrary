@@ -1,16 +1,19 @@
 import argparse
-import sys
 import json
 import logging
-from typing import Optional, Dict, Any
+import sys
+from typing import Any, Dict, Optional
 
+from src.registry.wal_manager import WALManager
 from src.router.capability_router import CapabilityRouter
 from src.runtime.sandbox import SkillSandbox
-from src.registry.wal_manager import WALManager
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-def process_intent(intent: str, script_path: Optional[str] = None, script_args: Optional[list] = None) -> Dict[str, Any]:
+
+def process_intent(
+    intent: str, script_path: Optional[str] = None, script_args: Optional[list] = None
+) -> Dict[str, Any]:
     """
     Process an intent: route it to a capability and execute in sandbox if applicable.
     State is NOT mutated directly, only via WAL in the Sandbox.
@@ -37,14 +40,18 @@ def process_intent(intent: str, script_path: Optional[str] = None, script_args: 
             skill_id=best_skill.id,
             script_path=script_path,
             args=script_args or [],
-            version=1
+            version=1,
         )
-        return {"status": "success", "skill_id": best_skill.id, "sandbox_result": result}
+        return {
+            "status": "success",
+            "skill_id": best_skill.id,
+            "sandbox_result": result,
+        }
     else:
         return {
-            "status": "success", 
-            "skill_id": best_skill.id, 
-            "message": "Skill identified. Provide --script-path for sandbox execution."
+            "status": "success",
+            "skill_id": best_skill.id,
+            "message": "Skill identified. Provide --script-path for sandbox execution.",
         }
 
 
@@ -65,24 +72,45 @@ def serve_mcp():
                 intent = params.get("intent")
                 script_path = params.get("script_path")
                 script_args = params.get("script_args", [])
-                
+
                 if not intent:
-                    resp = {"jsonrpc": "2.0", "error": {"code": -32602, "message": "Missing 'intent'"}, "id": req.get("id")}
+                    resp = {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32602, "message": "Missing 'intent'"},
+                        "id": req.get("id"),
+                    }
                 else:
                     result = process_intent(intent, script_path, script_args)
                     resp = {"jsonrpc": "2.0", "result": result, "id": req.get("id")}
             else:
-                resp = {"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": req.get("id")}
-                
+                resp = {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32601, "message": "Method not found"},
+                    "id": req.get("id"),
+                }
+
             print(json.dumps(resp), flush=True)
         except json.JSONDecodeError:
-            print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}, "id": None}), flush=True)
+            print(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32700, "message": "Parse error"},
+                        "id": None,
+                    }
+                ),
+                flush=True,
+            )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Skillbrary Master Entrypoint (CLI / MCP)")
     parser.add_argument("--intent", type=str, help="User intent or task description")
-    parser.add_argument("--script-path", type=str, help="Path to Python script to execute in sandbox for this intent")
+    parser.add_argument(
+        "--script-path",
+        type=str,
+        help="Path to Python script to execute in sandbox for this intent",
+    )
     parser.add_argument("--script-args", type=str, nargs="*", help="Arguments for the sandbox script")
     parser.add_argument("--mcp", action="store_true", help="Start MCP server via stdio")
     args = parser.parse_args()
@@ -94,6 +122,7 @@ def main():
         print(json.dumps(result, indent=2))
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()
