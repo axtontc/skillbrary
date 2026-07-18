@@ -27,7 +27,10 @@
   <a href="#-the-architecture-of-intelligence">Architecture</a> •
   <a href="#-http-api-endpoints">HTTP API Reference</a> •
   <a href="#-mcp-tool-reference">MCP Tools</a> •
-  <a href="#-contributing">Contributing</a>
+  <a href="#-core-subsystems">Subsystems</a> •
+  <a href="#-api--core-functions-reference">API Reference</a> •
+  <a href="#-comparison-matrix">Comparison Matrix</a> •
+  <a href="#-roadmap">Roadmap</a>
 </p>
 
 ---
@@ -37,6 +40,7 @@
 Traditional LLM agent frameworks fail at scale. By "slurping" entire codebases and APIs into prompt context windows, they suffer from $O(N^2)$ attention collapse, causing massive token blowout, high inference costs, and hallucinated function calls.
 
 **Skillbrary solves this.** 
+
 We provide a dedicated execution gateway utilizing a Write-Ahead Log (WAL) mutation ledger, custom cross-process concurrency file locks, and surgical Abstract Syntax Tree (AST) extractions. Your Swarm interacts with structural topology—not raw text.
 
 ---
@@ -65,12 +69,6 @@ cd The-Skillbrary
 
 # Sync virtual environment using uv (fastest)
 uv sync
-
-# Or using pip
-python -m venv .venv
-.venv/Scripts/activate  # On Windows
-source .venv/bin/activate  # On Linux/macOS
-pip install .
 ```
 
 ### 2. Verify with the Test Suite
@@ -160,14 +158,79 @@ Skillbrary automatically registers these tools with your agent:
 
 ---
 
-## 🔗 Related Projects
+## 🏗️ Core Subsystems
 
-Skillbrary belongs to a suite of interconnected AI agent utilities:
+| Subsystem | Folder / File | Responsibility |
+|---|---|---|
+| **FastMCP Server wrapper** | `skillbrary_mcp.py` | Command line entry point and FastMCP standard tool registration |
+| **REST Registry API Server** | `src/api.py` | FastAPI server hosting `/skills/search`, `/skills/install`, and `/skills/execute` routes |
+| **WAL Mutation Logger** | `src/wal_manager.py` | Concurrency lock manager implementing cross-platform locking (msvcrt / fcntl fallback) |
+| **Sandbox Runtime** | `src/runtime/sandbox.py` | Py sandbox executor checking AST nodes and enforcing run boundaries |
+
+---
+
+## 📖 API & Core Functions Reference
+
+### `src/wal_manager.py`
+These functions manage concurrent state reads/writes on index databases:
+
+| Function / Routine | Parameters | Description |
+|---|---|---|
+| `acquire_exclusive_lock(file_path)` | `str` / `Path` | Cross-platform lock wrapper returning an active lock file handle. |
+| `release_exclusive_lock(lock_handle)` | `object` | Releases the platform lock and closes the file descriptor. |
+
+### `src/runtime/sandbox.py`
+These routines execute and validate dynamic code scripts:
+
+| Function / Routine | Parameters | Description |
+|---|---|---|
+| `validate_ast_rules(code_string)` | `str` | Checks AST imports, decorators, and classes for structural anomalies. |
+| `execute_isolated_script(script_path, args)` | `Path`, `list[str]` | Runs script under an isolated subprocess, returning stdout logs. |
+
+---
+
+## 📊 Comparison Matrix
+
+| Registry Feature | Standard MCP | Custom Scripts | **The Skillbrary** |
+|---|:---:|:---:|:---:|
+| **Dynamic Skill Execution** | ❌ | ⚠️ Manual | **✅ Yes (FastAPI Sandbox)** |
+| **Cross-Process WAL Locks** | ❌ | ❌ | **✅ Yes (msvcrt/fcntl)** |
+| **Fast-Reject AST filtering** | ❌ | ❌ | **✅ Yes (<21ms check)** |
+| **CLI & REST API Access** | ❌ | ❌ | **✅ Yes (Dual interface)** |
+| **Auto Path Translation** | ❌ | ❌ | **✅ Yes (Workspace auto-resolve)** |
+
+---
+
+## 🧰 Tech Stack
+
+* **Web Framework**: FastAPI, Uvicorn
+* **MCP SDK**: FastMCP Python SDK
+* **Locking mechanisms**: fcntl (Unix), msvcrt (Windows)
+* **Verification tools**: pytest, httpx TestClient, Ruff, mypy
+
+---
+
+## 🗺️ Roadmap
+
+- [x] FastMCP stdio interface wrapping
+- [x] Multi-process file lock safety (Windows/Linux fallback)
+- [x] FastAPI REST search, install, and execute registry server
+- [x] Pytest HTTP API mock verification tests
+- [ ] **Decentralized Swarm P2P Registry Syncing** — Synchronize installed skills across nodes using a peer-to-peer gossip protocol
+- [ ] **Docker Execution Backend** — Run user-installed skills inside ephemeral Docker containers instead of native subprocesses
+- [ ] **AST Visual Topology Graph** — Visual browser explorer for skill dependencies
+
+---
+
+## 🔗 Ecosystem Cross-Linking
+
+Skillbrary is the capability store of the Antigravity Swarm ecosystem:
 
 | Project | Description |
 |---|---|
 | [AUI](https://github.com/axtontc/AUI) | Zero-latency cross-process UI automation for Windows and Web |
 | [MemMCP](https://github.com/axtontc/MemMCP) | Deterministic memory server with SQLite WAL and FAISS RRF |
+| [Multiverse-Planner](https://github.com/axtontc/Multiverse-Planner) | Brute-forces optimal plans via timeline expansion and pruning |
 | [The-Nexus](https://github.com/axtontc/The-Nexus) | Monolithic API gateway and orchestrator for local LLMs |
 | [Fractal-Swarm-v2](https://github.com/axtontc/Fractal-Swarm-v2) | Mathematically optimal state-machine agent swarm orchestration |
 | [AntiMem](https://github.com/axtontc/AntiMem) | Memory daemon and compactor for Antigravity swarms |
@@ -183,7 +246,7 @@ This project is licensed under the Apache License, Version 2.0. See the [LICENSE
 
 <div align="center">
   <br>
-  <strong>⭐ If the Skillbrary makes your multi-agent swarms more modular, consider giving it a star!</strong>
+  <strong>⭐ If The Skillbrary helps distribute your agent skills, consider giving it a star!</strong>
   <br>
   <br>
   <a href="https://github.com/axtontc/The-Skillbrary">
